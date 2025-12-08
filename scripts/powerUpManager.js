@@ -1,5 +1,5 @@
 import { gameState } from "./gameState.js";
-import { pingPongCanvas, pingPongCtx } from "./gameManager.js";
+import { pingPongCanvas, pingPongCtx, CheckLevelComplete } from "./gameManager.js";
 import { SoundManager } from "./soundManager.js";
 
 // Power-up types
@@ -288,6 +288,9 @@ const checkExtraBallBrickCollision = (ball) => {
         gameState.score++;
         SoundManager.play("brickHit");
         
+        // Create power-up when brick is destroyed
+        createPowerUp(brick.x, brick.y, brick.width, brick.height);
+        
         // Reverse direction
         const dx = ball.x - (brick.x + brick.width / 2);
         const dy = ball.y - (brick.y + brick.height / 2);
@@ -296,6 +299,9 @@ const checkExtraBallBrickCollision = (ball) => {
         } else {
           ball.yUpdate = -ball.yUpdate;
         }
+        
+        // Check if level is complete after destroying this brick
+        CheckLevelComplete();
         
         return;
       }
