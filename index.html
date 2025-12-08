@@ -2,61 +2,228 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ping Pong Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+    <title>Breakout Game</title>
 
     <style>
-      #pingPongCanvas {
-        position: relative;
-        z-index: 1;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #2a2a2a;
+      }
+
       .game-container {
-        position: relative;
-        width: 500px;
-        height: 400px; 
-        border: 2px solid;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #2a2a2a;
+      }
+
+      #pingPongCanvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        touch-action: none;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
       }
 
       #restartBtn,
-      #quitBtn,
-      #nextLevelBtn {
+      #quitBtn {
         position: absolute;
         top: 50%;
         transform: translate(-50%, -50%);
-        z-index: 2;
+        z-index: 10;
+        padding: clamp(10px, 2vw, 16px) clamp(20px, 4vw, 32px);
+        font-size: clamp(14px, 3vw, 18px);
+        font-weight: bold;
+        border: 2px solid #fff;
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        min-width: 120px;
+      }
+
+      #restartBtn:hover,
+      #quitBtn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%) scale(1.05);
+      }
+
+      #restartBtn:active,
+      #quitBtn:active {
+        transform: translate(-50%, -50%) scale(0.95);
       }
 
       #restartBtn {
-        left: 45%;
-      }
-      #nextLevelBtn{
-        top: 40%;
-        left: 49%;
-      }
-      #quitBtn {
-        left: 55%;
-      }
-      #winText{
-        position: absolute;
-        z-index: 2;
-        top: 70%;
         left: 40%;
-        /* transform: translate(-50%, -50%); */
+      }
+      
+      #quitBtn {
+        left: 60%;
+      }
+
+      @media (max-width: 768px) {
+        #restartBtn {
+          left: 35%;
+        }
+        
+        #quitBtn {
+          left: 65%;
+        }
+
+        #restartBtn,
+        #quitBtn {
+          min-width: 100px;
+          padding: 12px 20px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        #restartBtn {
+          left: 30%;
+        }
+        
+        #quitBtn {
+          left: 70%;
+        }
+      }
+
+      /* Game Panels */
+      .game-panel {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 20;
+        background: rgba(0, 0, 0, 0.95);
+        border: 3px solid #fff;
+        border-radius: 12px;
+        padding: clamp(20px, 5vw, 40px);
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+        min-width: clamp(250px, 70vw, 400px);
+        display: none;
+      }
+
+      .game-panel h1,
+      .game-panel h2 {
+        color: #fff;
+        font-size: clamp(28px, 8vw, 48px);
+        margin-bottom: clamp(10px, 3vw, 20px);
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      }
+
+      .game-panel p {
+        color: #fff;
+        font-size: clamp(14px, 4vw, 20px);
+        margin: clamp(8px, 2vw, 15px) 0;
+      }
+
+      #startSubtitle {
+        color: #ccc;
+        font-size: clamp(12px, 3vw, 16px);
+        margin-bottom: clamp(15px, 4vw, 25px);
+      }
+
+      #startBtn,
+      #restartFromOverBtn,
+      #quitFromOverBtn,
+      #nextLevelFromOverBtn {
+        display: inline-block;
+        margin: clamp(8px, 2vw, 12px);
+        padding: clamp(12px, 3vw, 16px) clamp(24px, 6vw, 40px);
+        font-size: clamp(16px, 4vw, 20px);
+        font-weight: bold;
+        border: 2px solid #fff;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        min-width: clamp(120px, 30vw, 150px);
+      }
+
+      #startBtn:hover,
+      #restartFromOverBtn:hover,
+      #quitFromOverBtn:hover,
+      #nextLevelFromOverBtn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+      }
+
+      #startBtn:active,
+      #restartFromOverBtn:active,
+      #quitFromOverBtn:active,
+      #nextLevelFromOverBtn:active {
+        transform: scale(0.95);
+      }
+
+      /* Responsive button layout for game over panel */
+      @media (max-width: 768px) {
+        #gameOverPanel button {
+          display: block;
+          width: 100%;
+          margin: clamp(6px, 1.5vw, 10px) 0;
+        }
+      }
+
+      #finalScore,
+      #highScoreDisplay {
+        font-weight: bold;
+        font-size: clamp(16px, 4vw, 24px);
+      }
+
+      #finalScoreValue,
+      #highScoreValue {
+        color: #ffd700;
       }
     </style>
   </head>
   <body>
     <div class="game-container">
-      <canvas id="pingPongCanvas" width="500" height="400"></canvas>
-      <button id="nextLevelBtn">Next Level</button>
+      <canvas id="pingPongCanvas"></canvas>
       <button id="restartBtn">Restart</button>
       <button id="quitBtn">Quit</button>
-
-      <h2 id="winText">You Won</h2>
+      
+      <!-- Start Game Panel -->
+      <div id="startPanel" class="game-panel">
+        <h1 id="startTitle">BREAKOUT</h1>
+        <p id="startSubtitle">Use arrow keys or drag paddle to play</p>
+        <button id="startBtn">Start Game</button>
+      </div>
+      
+      <!-- Game Over Panel -->
+      <div id="gameOverPanel" class="game-panel">
+        <h2 id="gameOverTitle">Game Over</h2>
+        <p id="finalScore">Score: <span id="finalScoreValue">0</span></p>
+        <p id="highScoreDisplay">High Score: <span id="highScoreValue">0</span></p>
+        <button id="nextLevelFromOverBtn">Next Level</button>
+        <button id="restartFromOverBtn">Restart</button>
+        <button id="quitFromOverBtn">Quit</button>
+      </div>
     </div>
-
-    <!-- <script src="script.js"></script> -->
-
 
     <script type="module" src="./scripts/gameManager.js"></script>
   </body>
