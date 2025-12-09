@@ -101,7 +101,13 @@ let activePowerUps = [];
 // Active effects
 let activeEffects = {
   slowBall: { active: false, endTime: 0 },
-  widePaddle: { active: false, endTime: 0, originalWidth: 0 }
+  widePaddle: { 
+    active: false, 
+    endTime: 0, 
+    originalWidth: 0,
+    targetWidth: 0,
+    isAnimating: false
+  }
 };
 
 // Extra balls array
@@ -146,6 +152,9 @@ export const updatePowerUps = (dt) => {
   if (activeEffects.widePaddle.active && currentTime > activeEffects.widePaddle.endTime) {
     deactivateWidePaddle();
   }
+  
+  // Update paddle width animation
+  updatePaddleWidthAnimation(dt);
   
   // Update extra balls
   updateExtraBalls(dt);
@@ -320,26 +329,59 @@ const activateWidePaddle = () => {
   activeEffects.widePaddle.active = true;
   activeEffects.widePaddle.endTime = Date.now() + 10000; // 10 seconds
   activeEffects.widePaddle.originalWidth = gameState.paddleWidth;
-  
-  // Increase paddle width by 1.5x
-  gameState.paddleWidth *= 1.5;
-  
-  // Adjust position to keep centered
-  const width = pingPongCanvas.width / (window.devicePixelRatio || 1);
-  gameState.paddleLeftPos = Math.max(0, Math.min(gameState.paddleLeftPos, width - gameState.paddleWidth));
+  activeEffects.widePaddle.targetWidth = gameState.paddleWidth * 1.5;
+  activeEffects.widePaddle.isAnimating = true;
+  activeEffects.widePaddle.animationStartTime = Date.now();
 };
 
 // Deactivate wide paddle effect
 const deactivateWidePaddle = () => {
   if (!activeEffects.widePaddle.active) return;
   activeEffects.widePaddle.active = false;
+  activeEffects.widePaddle.targetWidth = activeEffects.widePaddle.originalWidth;
+  activeEffects.widePaddle.isAnimating = true;
+  activeEffects.widePaddle.animationStartTime = Date.now();
+};
+
+// Update paddle width animation (smooth transition)
+export const updatePaddleWidthAnimation = (dt) => {
+  if (!activeEffects.widePaddle.isAnimating) return;
   
-  // Restore original width
-  gameState.paddleWidth = activeEffects.widePaddle.originalWidth;
+  const currentWidth = gameState.paddleWidth;
+  const targetWidth = activeEffects.widePaddle.targetWidth;
+  const widthDiff = targetWidth - currentWidth;
   
-  // Adjust position
+  // If already at target, stop animating
+  if (Math.abs(widthDiff) < 0.5) {
+    gameState.paddleWidth = targetWidth;
+    activeEffects.widePaddle.isAnimating = false;
+    
+    // Adjust position to keep paddle in bounds
+    const width = pingPongCanvas.width / (window.devicePixelRatio || 1);
+    gameState.paddleLeftPos = Math.max(0, Math.min(gameState.paddleLeftPos, width - gameState.paddleWidth));
+    return;
+  }
+  
+  // Smooth interpolation (ease in/out)
+  const animationDuration = 300; // 300ms for smooth transition
+  const elapsed = Date.now() - activeEffects.widePaddle.animationStartTime;
+  const progress = Math.min(elapsed / animationDuration, 1);
+  
+  // Easing function (ease in-out cubic)
+  const easedProgress = progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+  
+  // Calculate paddle center before changing width (to keep it centered)
   const width = pingPongCanvas.width / (window.devicePixelRatio || 1);
-  gameState.paddleLeftPos = Math.max(0, Math.min(gameState.paddleLeftPos, width - gameState.paddleWidth));
+  const paddleCenterX = gameState.paddleLeftPos + currentWidth / 2;
+  
+  // Interpolate width
+  gameState.paddleWidth = currentWidth + widthDiff * easedProgress;
+  
+  // Keep paddle centered during animation (adjust position from center)
+  const newLeftPos = paddleCenterX - gameState.paddleWidth / 2;
+  gameState.paddleLeftPos = Math.max(0, Math.min(newLeftPos, width - gameState.paddleWidth));
 };
 
 // Draw all power-ups
@@ -366,18 +408,28 @@ export const drawExtraBalls = () => {
 export const resetPowerUps = () => {
   activePowerUps = [];
   extraBalls = [];
-  activeEffects = {
-    slowBall: { active: false, endTime: 0 },
-    widePaddle: { active: false, endTime: 0, originalWidth: 0 }
-  };
   
-  // Deactivate any active effects
+  // Deactivate any active effects first
   if (activeEffects.slowBall.active) {
     deactivateSlowBall();
   }
   if (activeEffects.widePaddle.active) {
     deactivateWidePaddle();
+    // Ensure paddle returns to normal width immediately on reset
+    gameState.paddleWidth = activeEffects.widePaddle.originalWidth || gameState.paddleWidth;
   }
+  
+  // Reset effects
+  activeEffects = {
+    slowBall: { active: false, endTime: 0 },
+    widePaddle: { 
+      active: false, 
+      endTime: 0, 
+      originalWidth: 0,
+      targetWidth: 0,
+      isAnimating: false
+    }
+  };
 };
 
 // Get extra balls for collision checking

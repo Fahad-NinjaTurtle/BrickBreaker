@@ -52,17 +52,40 @@ const Bounce = () => {
   const ballCenterX = g.circleX;
   
   // Calculate where ball hit on paddle (0 = left edge, 1 = right edge)
-  const hitPosition = (ballCenterX - g.paddleLeftPos) / g.paddleWidth;
+  // Clamp hit position to valid range
+  let hitPosition = (ballCenterX - g.paddleLeftPos) / g.paddleWidth;
+  hitPosition = Math.max(0, Math.min(1, hitPosition));
   
-  // Map hit position to angle: left edge = -60°, center = 0°, right edge = +60°
-  // This creates a range from -60° to +60° based on where ball hits paddle
-  const angle = (hitPosition - 0.5) * 120; // -60° to +60°
+  // Improved angle calculation with better distribution
+  // Use a more responsive curve: edges get more extreme angles
+  // Map hit position to angle with better physics
+  // Center (0.5) = 0°, edges get more extreme angles
+  let angle;
+  
+  if (hitPosition < 0.5) {
+    // Left side: map 0.0-0.5 to -75° to 0°
+    // Use quadratic curve for better feel
+    const normalized = hitPosition * 2; // 0 to 1
+    angle = -75 * (1 - normalized * normalized); // Quadratic curve
+  } else {
+    // Right side: map 0.5-1.0 to 0° to +75°
+    const normalized = (hitPosition - 0.5) * 2; // 0 to 1
+    angle = 75 * normalized * normalized; // Quadratic curve
+  }
+  
+  // Add slight randomness for more dynamic gameplay (±5°)
+  const randomVariation = (Math.random() - 0.5) * 10;
+  angle += randomVariation;
   
   // Get current speed magnitude
   const currentSpeed = Math.sqrt(g.circleXUpdate ** 2 + g.circleYUpdate ** 2);
   
+  // Add slight speed boost based on hit position (edges get more speed)
+  const speedMultiplier = 1 + Math.abs(hitPosition - 0.5) * 0.1; // Up to 5% speed boost
+  const finalSpeed = currentSpeed * speedMultiplier;
+  
   // Set new velocity based on angle
-  setVelocityFromAngle(angle, currentSpeed, 60);
+  setVelocityFromAngle(angle, finalSpeed, 75); // Increased max angle to 75°
   
   // Ensure ball is above paddle
   g.circleY = g.paddleTopPos - g.circleSize;
