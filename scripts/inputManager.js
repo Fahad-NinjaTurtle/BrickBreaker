@@ -1,4 +1,5 @@
 import { gameState } from "./gameState.js";
+import { releaseBallFromPaddle } from "./animate.js";
 
 export const setupInput = (pingPongCanvas) => {
   const AddListnersForKeyboard = () => {
@@ -21,15 +22,24 @@ export const setupInput = (pingPongCanvas) => {
       const rect = pingPongCanvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-
-      if (
+      const canvasHeight = pingPongCanvas.height / (window.devicePixelRatio || 1);
+      
+      // Check if click is in bottom 25% of screen
+      const bottom25Percent = canvasHeight * 0.75;
+      const isInBottomArea = mouseY >= bottom25Percent;
+      
+      // Also allow dragging from paddle itself
+      const isOnPaddle = (
         mouseX >= gameState.paddleLeftPos &&
         mouseX <= gameState.paddleLeftPos + gameState.paddleWidth &&
         mouseY >= gameState.paddleTopPos &&
         mouseY <= gameState.paddleTopPos + gameState.paddleHeight
-      ) {
+      );
+
+      if (isInBottomArea || isOnPaddle) {
         isDragging = true;
-        dragOffsetX = mouseX - gameState.paddleLeftPos;
+        // Calculate offset from paddle center for better control
+        dragOffsetX = mouseX - (gameState.paddleLeftPos + gameState.paddleWidth / 2);
       }
     });
 
@@ -37,7 +47,17 @@ export const setupInput = (pingPongCanvas) => {
       if (!isDragging) return;
       const rect = pingPongCanvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
-      gameState.paddleLeftPos = mouseX - dragOffsetX;
+      const canvasWidth = pingPongCanvas.width / (window.devicePixelRatio || 1);
+      const oldPos = gameState.paddleLeftPos;
+      
+      // Move paddle center to mouse position (minus offset)
+      const newPaddleCenterX = mouseX - dragOffsetX;
+      gameState.paddleLeftPos = Math.max(0, Math.min(newPaddleCenterX - gameState.paddleWidth / 2, canvasWidth - gameState.paddleWidth));
+      
+      // Release ball if paddle moved
+      if (gameState.ballStuckToPaddle && Math.abs(gameState.paddleLeftPos - oldPos) > 0.1) {
+        releaseBallFromPaddle();
+      }
     });
 
     pingPongCanvas.addEventListener("mouseup", () => {
@@ -57,15 +77,25 @@ export const setupInput = (pingPongCanvas) => {
       const rect = pingPongCanvas.getBoundingClientRect();
       const touchX = e.touches[0].clientX - rect.left;
       const touchY = e.touches[0].clientY - rect.top;
-
-      if (
+      const canvasHeight = pingPongCanvas.height / (window.devicePixelRatio || 1);
+      
+      // Check if touch is in bottom 25% of screen
+      const bottom25Percent = canvasHeight * 0.75;
+      const isInBottomArea = touchY >= bottom25Percent;
+      
+      // Also allow dragging from paddle itself
+      const isOnPaddle = (
         touchX >= gameState.paddleLeftPos &&
         touchX <= gameState.paddleLeftPos + gameState.paddleWidth &&
         touchY >= gameState.paddleTopPos &&
         touchY <= gameState.paddleTopPos + gameState.paddleHeight
-      ) {
+      );
+
+      if (isInBottomArea || isOnPaddle) {
         isDragging = true;
-        dragOffsetX = touchX - gameState.paddleLeftPos;
+        e.preventDefault(); // Prevent scrolling
+        // Calculate offset from paddle center for better control
+        dragOffsetX = touchX - (gameState.paddleLeftPos + gameState.paddleWidth / 2);
       }
     });
 
@@ -74,7 +104,17 @@ export const setupInput = (pingPongCanvas) => {
       e.preventDefault(); // prevents page scrolling
       const rect = pingPongCanvas.getBoundingClientRect();
       const touchX = e.touches[0].clientX - rect.left;
-      gameState.paddleLeftPos = touchX - dragOffsetX;
+      const canvasWidth = pingPongCanvas.width / (window.devicePixelRatio || 1);
+      const oldPos = gameState.paddleLeftPos;
+      
+      // Move paddle center to touch position (minus offset)
+      const newPaddleCenterX = touchX - dragOffsetX;
+      gameState.paddleLeftPos = Math.max(0, Math.min(newPaddleCenterX - gameState.paddleWidth / 2, canvasWidth - gameState.paddleWidth));
+      
+      // Release ball if paddle moved
+      if (gameState.ballStuckToPaddle && Math.abs(gameState.paddleLeftPos - oldPos) > 0.1) {
+        releaseBallFromPaddle();
+      }
     });
 
     pingPongCanvas.addEventListener("touchend", () => {

@@ -215,14 +215,15 @@ const activateExtraBall = () => {
   const height = pingPongCanvas.height / (window.devicePixelRatio || 1);
   
   // Create new ball at paddle position
-  const baseSpeed = Math.sqrt(gameState.circleXUpdate ** 2 + gameState.circleYUpdate ** 2);
+  const baseSpeed = Math.sqrt(gameState.circleXUpdate ** 2 + gameState.circleYUpdate ** 2) || gameState.baseBallSpeed || 200;
   extraBalls.push({
     x: gameState.paddleLeftPos + gameState.paddleWidth / 2,
     y: gameState.paddleTopPos - gameState.circleSize,
     size: gameState.circleSize,
     xUpdate: baseSpeed * (Math.random() > 0.5 ? 1 : -1),
     yUpdate: -baseSpeed,
-    active: true
+    active: true,
+    trail: [] // Trail for extra ball
   });
 };
 
@@ -233,6 +234,13 @@ const updateExtraBalls = (dt) => {
   
   extraBalls.forEach((ball, index) => {
     if (!ball.active) return;
+    
+    // Update trail
+    if (!ball.trail) ball.trail = [];
+    ball.trail.push({ x: ball.x, y: ball.y });
+    if (ball.trail.length > 8) {
+      ball.trail.shift();
+    }
     
     // Move ball
     ball.x += ball.xUpdate * (dt / 1000);
@@ -394,6 +402,21 @@ export const drawExtraBalls = () => {
   extraBalls.forEach(ball => {
     if (!ball.active) return;
     
+    // Draw trail for extra balls
+    if (ball.trail && ball.trail.length > 1) {
+      for (let i = 0; i < ball.trail.length; i++) {
+        const point = ball.trail[i];
+        const alpha = (i + 1) / ball.trail.length * 0.4; // Fade from 40% to 0%
+        const size = ball.size * (0.3 + (i / ball.trail.length) * 0.7);
+        
+        pingPongCtx.beginPath();
+        pingPongCtx.arc(point.x, point.y, size, 0, Math.PI * 2);
+        pingPongCtx.fillStyle = `rgba(255, 255, 0, ${alpha})`; // Yellow trail
+        pingPongCtx.fill();
+      }
+    }
+    
+    // Draw main ball
     pingPongCtx.beginPath();
     pingPongCtx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
     pingPongCtx.fillStyle = "#ffff00"; // Yellow for extra balls

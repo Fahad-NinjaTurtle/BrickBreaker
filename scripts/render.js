@@ -126,6 +126,22 @@ const DrawBallLife = () => {
 
 // === BALL ===
 const DrawBall = () => {
+  // Draw ball trail
+  const trail = gameState.ballTrail;
+  if (trail.length > 1) {
+    for (let i = 0; i < trail.length; i++) {
+      const point = trail[i];
+      const alpha = (i + 1) / trail.length * 0.5; // Fade from 50% to 0%
+      const size = gameState.circleSize * (0.3 + (i / trail.length) * 0.7); // Scale from 30% to 100%
+      
+      pingPongCtx.beginPath();
+      pingPongCtx.arc(point.x, point.y, size, 0, Math.PI * 2);
+      pingPongCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      pingPongCtx.fill();
+    }
+  }
+  
+  // Draw main ball
   pingPongCtx.beginPath();
   pingPongCtx.arc(
     gameState.circleX,
@@ -173,18 +189,31 @@ const DrawPaddle = () => {
 export const ResetStates = () => {
   const width = pingPongCanvas.width / (window.devicePixelRatio || 1);
   const height = pingPongCanvas.height / (window.devicePixelRatio || 1);
-  
-  // Normalize ball speed - consistent across devices
-  // Use a fixed base speed that feels good on all screen sizes
-  // Scale slightly with screen size but keep it reasonable
-  const isMobile = width <= 768;
-  const baseSpeed = isMobile ? 180 : Math.min(width / 3, 350); // Slower on mobile, capped on PC
 
-  gameState.circleX = Math.random() * width / 2 + width / 4;
-  gameState.circleY = height / 2;
-
-  gameState.circleXUpdate = baseSpeed * (Math.random() > 0.5 ? 1 : -1);
-  gameState.circleYUpdate = baseSpeed;
-
+  // Position paddle in center
   gameState.paddleLeftPos = (width - gameState.paddleWidth) / 2;
+  
+  // Stick ball to paddle (will be released when player moves)
+  gameState.ballStuckToPaddle = true;
+  
+  // Position ball on top of paddle, centered
+  gameState.circleX = gameState.paddleLeftPos + gameState.paddleWidth / 2;
+  gameState.circleY = gameState.paddleTopPos - gameState.circleSize;
+  
+  // Calculate base speed with level progression
+  // Speed increases by 10% per level (capped at 2x base speed)
+  const isMobile = width <= 768;
+  const baseSpeed = isMobile ? 180 : Math.min(width / 3, 350);
+  const levelMultiplier = Math.min(1 + (gameState.currentLevel - 1) * 0.1, 2); // Max 2x speed
+  const finalSpeed = baseSpeed * levelMultiplier;
+  
+  // Stop ball movement (will start when released with calculated speed)
+  gameState.circleXUpdate = 0;
+  gameState.circleYUpdate = 0;
+  
+  // Store speed for when ball is released
+  gameState.baseBallSpeed = finalSpeed;
+  
+  // Clear trail
+  gameState.ballTrail = [];
 };

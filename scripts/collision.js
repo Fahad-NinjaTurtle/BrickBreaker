@@ -2,6 +2,9 @@ import { gameState } from "./gameState.js";
 import { pingPongCanvas, EnableUi } from "./gameManager.js";
 import { SoundManager } from "./soundManager.js";
 export const CheckCollision = () => {
+  // Don't check collision if ball is stuck to paddle
+  if (gameState.ballStuckToPaddle) return;
+  
   const g = gameState;
 
   if (
@@ -15,12 +18,20 @@ export const CheckCollision = () => {
 };
 
 export const BallGroundCheck = () => {
+  // Don't check if ball is stuck to paddle
+  if (gameState.ballStuckToPaddle) return;
+  
   const height = pingPongCanvas.height / (window.devicePixelRatio || 1);
   
   if (gameState.circleY + gameState.circleSize >= height) {
     if (gameState.ballLife > 0) {
       gameState.ballLife--;
-      Bounce();
+      // Stick ball back to paddle after losing a life
+      gameState.ballStuckToPaddle = true;
+      gameState.circleX = gameState.paddleLeftPos + gameState.paddleWidth / 2;
+      gameState.circleY = gameState.paddleTopPos - gameState.circleSize;
+      gameState.circleXUpdate = 0;
+      gameState.circleYUpdate = 0;
       return;
     } else {
       gameState.gameOver = true;
@@ -77,8 +88,13 @@ const Bounce = () => {
   const randomVariation = (Math.random() - 0.5) * 10;
   angle += randomVariation;
   
-  // Get current speed magnitude
-  const currentSpeed = Math.sqrt(g.circleXUpdate ** 2 + g.circleYUpdate ** 2);
+  // Get current speed magnitude (preserve level-based speed)
+  let currentSpeed = Math.sqrt(g.circleXUpdate ** 2 + g.circleYUpdate ** 2);
+  
+  // If speed is 0 or very low, use base speed from gameState
+  if (currentSpeed < 50) {
+    currentSpeed = g.baseBallSpeed || 200;
+  }
   
   // Add slight speed boost based on hit position (edges get more speed)
   const speedMultiplier = 1 + Math.abs(hitPosition - 0.5) * 0.1; // Up to 5% speed boost

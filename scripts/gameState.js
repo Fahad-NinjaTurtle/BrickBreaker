@@ -10,6 +10,8 @@ export const gameState = {
   ballLife: 3,
   circleXUpdate: 200, // pixels per second
   circleYUpdate: 200,
+  baseBallSpeed: 200, // Base speed (will be modified by level)
+  ballTrail: [], // Trail positions for visual effect
 
   // paddle
   paddleLeftPos: 200,
@@ -20,6 +22,7 @@ export const gameState = {
   // game status
   score: 0,
   gameOver: false,
+  ballStuckToPaddle: true, // Ball starts stuck to paddle
 
   // input flags
   moveLeft: false,
