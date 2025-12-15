@@ -201,10 +201,20 @@ export const ResetStates = () => {
   gameState.circleY = gameState.paddleTopPos - gameState.circleSize;
   
   // Calculate base speed with level progression
-  // Speed increases by 10% per level (capped at 2x base speed)
+  // Speed increases per level (slightly faster overall for snappier feel)
   const isMobile = width <= 768;
-  const baseSpeed = isMobile ? 180 : Math.min(width / 3, 350);
-  const levelMultiplier = Math.min(1 + (gameState.currentLevel - 1) * 0.1, 2); // Max 2x speed
+  const isPortrait = height > width;
+  // Slight global speed buff
+  let baseSpeed;
+  if (isMobile && isPortrait) {
+    // On mobile portrait, make the ball much faster (2.5x of previous base)
+    baseSpeed = 230 * 1.8;
+  } else if (isMobile) {
+    baseSpeed = 230;
+  } else {
+    baseSpeed = Math.min(width / 2.5, 400);
+  }
+  const levelMultiplier = Math.min(1 + (gameState.currentLevel - 1) * 0.12, 2.2); // a bit more aggressive
   const finalSpeed = baseSpeed * levelMultiplier;
   
   // Stop ball movement (will start when released with calculated speed)

@@ -41,25 +41,29 @@ const AnimateBall = (dt) => {
   }
   
   // move ball
-  if (gameState.circleX < gameState.circleSize) {
-    gameState.circleX = gameState.circleSize;
-  }
   gameState.circleX += gameState.circleXUpdate * (dt / 1000);
   gameState.circleY += gameState.circleYUpdate * (dt / 1000);
   
-  // bounce off left/right walls
-  if (
-    gameState.circleX + gameState.circleSize > width ||
-    gameState.circleX - gameState.circleSize < 0
-  ) {
-    gameState.circleXUpdate = -gameState.circleXUpdate;
-    SoundManager.play("bounce")
+  // --- Robust wall collisions to avoid "sticking" on boundaries ---
+  // bounce off right wall
+  if (gameState.circleX + gameState.circleSize > width) {
+    gameState.circleX = width - gameState.circleSize;
+    gameState.circleXUpdate = -Math.abs(gameState.circleXUpdate);
+    SoundManager.play("bounce");
+  }
+
+  // bounce off left wall
+  if (gameState.circleX - gameState.circleSize < 0) {
+    gameState.circleX = gameState.circleSize;
+    gameState.circleXUpdate = Math.abs(gameState.circleXUpdate);
+    SoundManager.play("bounce");
   }
 
   // bounce off top
   if (gameState.circleY - gameState.circleSize < 0) {
-    gameState.circleYUpdate = -gameState.circleYUpdate;
-    SoundManager.play("bounce")
+    gameState.circleY = gameState.circleSize;
+    gameState.circleYUpdate = Math.abs(gameState.circleYUpdate);
+    SoundManager.play("bounce");
   }
   BallGroundCheck();
   CheckCollision();

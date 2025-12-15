@@ -1,6 +1,6 @@
 export const gameState = {
   currentLevel: 1,
-  bricksRow: 1,
+  bricksRow: 3,
   bricksColumn: 8,
   highScore: 0,
   // ball

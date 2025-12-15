@@ -170,7 +170,8 @@ const RestartGame = () => {
   gameState.gameOver = false;
   gameState.score = 0;
   gameState.bricksArray = [];
-  gameState.bricksRow = 1;
+  // Start every fresh game with at least 3 brick rows for more challenge
+  gameState.bricksRow = 3;
   gameState.currentLevel = 1;
   gameState.ballLife = 3;
   resetPowerUps(); // Reset power-ups
