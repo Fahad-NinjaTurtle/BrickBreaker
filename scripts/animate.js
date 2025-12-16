@@ -45,24 +45,51 @@ const AnimateBall = (dt) => {
   gameState.circleY += gameState.circleYUpdate * (dt / 1000);
   
   // --- Robust wall collisions to avoid "sticking" on boundaries ---
+  // First, clamp ball position to ensure it's always within bounds
+  // This prevents the ball from getting stuck outside the canvas
+  const minX = gameState.circleSize;
+  const maxX = width - gameState.circleSize;
+  const minY = gameState.circleSize;
+  
+  // Clamp X position
+  if (gameState.circleX < minX) {
+    gameState.circleX = minX;
+  } else if (gameState.circleX > maxX) {
+    gameState.circleX = maxX;
+  }
+  
+  // Clamp Y position (top only, bottom is handled by ground check)
+  if (gameState.circleY < minY) {
+    gameState.circleY = minY;
+  }
+  
+  // Now check for collisions and reverse velocity if needed
+  // Only bounce if velocity is pointing outward (prevents multiple bounces)
+  let bounced = false;
+  
   // bounce off right wall
-  if (gameState.circleX + gameState.circleSize > width) {
-    gameState.circleX = width - gameState.circleSize;
+  if (gameState.circleX >= maxX && gameState.circleXUpdate > 0) {
+    gameState.circleX = maxX;
     gameState.circleXUpdate = -Math.abs(gameState.circleXUpdate);
-    SoundManager.play("bounce");
+    bounced = true;
   }
 
   // bounce off left wall
-  if (gameState.circleX - gameState.circleSize < 0) {
-    gameState.circleX = gameState.circleSize;
+  if (gameState.circleX <= minX && gameState.circleXUpdate < 0) {
+    gameState.circleX = minX;
     gameState.circleXUpdate = Math.abs(gameState.circleXUpdate);
-    SoundManager.play("bounce");
+    bounced = true;
   }
 
   // bounce off top
-  if (gameState.circleY - gameState.circleSize < 0) {
-    gameState.circleY = gameState.circleSize;
+  if (gameState.circleY <= minY && gameState.circleYUpdate < 0) {
+    gameState.circleY = minY;
     gameState.circleYUpdate = Math.abs(gameState.circleYUpdate);
+    bounced = true;
+  }
+  
+  // Play sound only once per bounce
+  if (bounced) {
     SoundManager.play("bounce");
   }
   BallGroundCheck();
