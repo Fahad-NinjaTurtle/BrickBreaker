@@ -176,9 +176,50 @@ export function checkBrickCollision() {
         // Create power-up when brick is destroyed
         createPowerUp(brick.x, brick.y, brick.width, brick.height);
         
+        // Resolve collision and immediately move ball away from brick
         resolveBrickHitDirection(brick);
+        
+        // IMPORTANT: Move ball away from brick to prevent hitting multiple bricks
+        // This ensures the ball bounces back immediately after hitting one brick
+        const ballCenterX = gameState.circleX;
+        const ballCenterY = gameState.circleY;
+        const brickCenterX = brick.x + brick.width / 2;
+        const brickCenterY = brick.y + brick.height / 2;
+        
+        // Calculate overlap amounts
+        const overlapX = Math.min(
+          ballRight - brickLeft,
+          brickRight - ballLeft
+        );
+        const overlapY = Math.min(
+          ballBottom - brickTop,
+          brickBottom - ballTop
+        );
+        
+        // Move ball out of brick based on which overlap is smaller
+        // This ensures ball is pushed away from the collision point
+        if (overlapX < overlapY) {
+          // Horizontal collision - move ball horizontally
+          if (ballCenterX < brickCenterX) {
+            // Ball hit from left side
+            gameState.circleX = brickLeft - gameState.circleSize - 0.1;
+          } else {
+            // Ball hit from right side
+            gameState.circleX = brickRight + gameState.circleSize + 0.1;
+          }
+        } else {
+          // Vertical collision - move ball vertically
+          if (ballCenterY < brickCenterY) {
+            // Ball hit from top
+            gameState.circleY = brickTop - gameState.circleSize - 0.1;
+          } else {
+            // Ball hit from bottom
+            gameState.circleY = brickBottom + gameState.circleSize + 0.1;
+          }
+        }
+        
         CheckLevelComplete();
-        return;
+        return; // Only process one collision per frame
       }
     }
   }
@@ -210,8 +251,14 @@ const setVelocityFromAngle = (angleDegrees, speed, maxAngle = 45, preserveYDirec
 function resolveBrickHitDirection(brick) {
   const ballCenterX = gameState.circleX;
   const ballCenterY = gameState.circleY;
+  const brickCenterX = brick.x + brick.width / 2;
+  const brickCenterY = brick.y + brick.height / 2;
 
-  // Determine which side was hit (more horizontal or vertical overlap)
+  // Use current velocity to determine approach direction (more reliable than estimated previous position)
+  const currentVelX = gameState.circleXUpdate;
+  const currentVelY = gameState.circleYUpdate;
+  
+  // Determine which side was hit based on overlap
   const overlapX = Math.min(
     ballCenterX + gameState.circleSize - brick.x,
     brick.x + brick.width - (ballCenterX - gameState.circleSize)
@@ -222,29 +269,67 @@ function resolveBrickHitDirection(brick) {
   );
 
   // Get current speed magnitude
-  const currentSpeed = Math.sqrt(
+  const currentSpeed = Math.sqrt(currentVelX ** 2 + currentVelY ** 2);
+
+  // Determine collision side based on velocity direction and overlap
+  // If ball is moving upward (negative Y), it's hitting from below
+  // If ball is moving downward (positive Y), it's hitting from above
+  const hittingFromBottom = currentVelY > 0; // Ball moving down = hitting bottom of brick
+  const hittingFromTop = currentVelY < 0; // Ball moving up = hitting top of brick
+  const hittingFromLeft = currentVelX > 0; // Ball moving right = hitting left side of brick
+  const hittingFromRight = currentVelX < 0; // Ball moving left = hitting right side of brick
+  
+  // Determine primary collision direction
+  // If overlapX is significantly smaller, it's a side hit
+  // If overlapY is significantly smaller, it's a top/bottom hit
+  const isSideHit = overlapX < overlapY * 0.7; // Side hit if X overlap is much smaller
+  const isTopBottomHit = overlapY < overlapX * 0.7; // Top/bottom hit if Y overlap is much smaller
+  
+  if (isSideHit) {
+    // Side collision - reverse X direction, preserve Y direction
+    // Preserve speed exactly - just reverse X direction
+    gameState.circleXUpdate = -currentVelX; // Reverse X
+    // Y direction stays the same (preserve speed)
+    
+  } else if (isTopBottomHit) {
+    // Top or bottom collision - reverse Y direction, preserve X direction
+    // Preserve speed exactly - just reverse Y direction
+    gameState.circleYUpdate = -currentVelY; // Reverse Y
+    // X direction stays the same (preserve speed)
+    
+  } else {
+    // Corner/edge hit - determine based on velocity direction
+    // If moving more horizontally, treat as side hit
+    // If moving more vertically, treat as top/bottom hit
+    if (Math.abs(currentVelX) > Math.abs(currentVelY)) {
+      // More horizontal movement - side hit
+      gameState.circleXUpdate = -currentVelX;
+      // Keep Y direction but may reverse if hitting corner
+      if (hittingFromBottom && ballCenterY > brickCenterY) {
+        gameState.circleYUpdate = Math.abs(currentVelY); // Bounce down
+      } else if (hittingFromTop && ballCenterY < brickCenterY) {
+        gameState.circleYUpdate = -Math.abs(currentVelY); // Bounce up
+      }
+    } else {
+      // More vertical movement - top/bottom hit
+      gameState.circleYUpdate = -currentVelY;
+      // Keep X direction but may reverse if hitting corner
+      if (hittingFromLeft && ballCenterX < brickCenterX) {
+        gameState.circleXUpdate = -Math.abs(currentVelX); // Bounce left
+      } else if (hittingFromRight && ballCenterX > brickCenterX) {
+        gameState.circleXUpdate = Math.abs(currentVelX); // Bounce right
+      }
+    }
+  }
+  
+  // Ensure minimum speed to prevent ball from getting stuck
+  const finalSpeed = Math.sqrt(
     gameState.circleXUpdate ** 2 + gameState.circleYUpdate ** 2
   );
-
-  let angleDegrees;
-  
-  // If more horizontal overlap, bounce primarily on Y axis with slight X angle
-  if (overlapX > overlapY) {
-    // Calculate angle based on horizontal position on brick
-    // Left side = -45°, center = 0°, right side = +45°
-    const hitPosition = (ballCenterX - brick.x) / brick.width;
-    angleDegrees = (hitPosition - 0.5) * 90; // -45° to +45°
-    // Set velocity with Y bounce (upward)
-    setVelocityFromAngle(angleDegrees, currentSpeed, 45, false);
-  } else {
-    // If more vertical overlap, bounce primarily on X axis with slight Y angle
-    // Top = -45°, center = 0°, bottom = +45°
-    const hitPosition = (ballCenterY - brick.y) / brick.height;
-    angleDegrees = (hitPosition - 0.5) * 90; // -45° to +45°
-    // Set velocity preserving Y direction (for side hits)
-    const currentYSign = Math.sign(gameState.circleYUpdate);
-    setVelocityFromAngle(angleDegrees, currentSpeed, 45, true);
-    // Reverse X direction for side hits
-    gameState.circleXUpdate = -gameState.circleXUpdate;
+  if (finalSpeed < currentSpeed * 0.5) {
+    // If speed dropped too much, restore it
+    const speedMultiplier = currentSpeed / finalSpeed;
+    gameState.circleXUpdate *= speedMultiplier;
+    gameState.circleYUpdate *= speedMultiplier;
   }
 }

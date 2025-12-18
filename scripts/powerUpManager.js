@@ -100,7 +100,12 @@ let activePowerUps = [];
 
 // Active effects
 let activeEffects = {
-  slowBall: { active: false, endTime: 0 },
+  slowBall: { 
+    active: false, 
+    endTime: 0,
+    originalSpeedMagnitude: 0, // Store original speed magnitude (not X/Y components)
+    slowDownCount: 0 // Track how many slow-downs are active
+  },
   widePaddle: { 
     active: false, 
     endTime: 0, 
@@ -179,10 +184,23 @@ const collectPowerUp = (type) => {
 
 // Activate slow ball effect (5 seconds)
 const activateSlowBall = () => {
+  // If already active, just extend the time
+  if (activeEffects.slowBall.active) {
+    activeEffects.slowBall.endTime = Date.now() + 5000; // Extend by 5 seconds
+    activeEffects.slowBall.slowDownCount++;
+    return; // Don't slow down again if already slowed
+  }
+  
+  // Store original speed magnitude (not X/Y components) to preserve angle when restoring
+  const currentSpeed = Math.sqrt(
+    gameState.circleXUpdate ** 2 + gameState.circleYUpdate ** 2
+  );
+  activeEffects.slowBall.originalSpeedMagnitude = currentSpeed;
   activeEffects.slowBall.active = true;
   activeEffects.slowBall.endTime = Date.now() + 5000; // 5 seconds
+  activeEffects.slowBall.slowDownCount = 1;
   
-  // Reduce ball speed by 50%
+  // Reduce ball speed by 50% (preserve angle, just reduce magnitude)
   gameState.circleXUpdate *= 0.5;
   gameState.circleYUpdate *= 0.5;
   
@@ -196,13 +214,40 @@ const activateSlowBall = () => {
 // Deactivate slow ball effect
 const deactivateSlowBall = () => {
   if (!activeEffects.slowBall.active) return;
+  
+  // Restore original speed magnitude while preserving current angle
+  // This ensures the ball continues in the same direction it was going
+  if (activeEffects.slowBall.originalSpeedMagnitude > 0) {
+    // Get current speed magnitude and angle
+    const currentSpeed = Math.sqrt(
+      gameState.circleXUpdate ** 2 + gameState.circleYUpdate ** 2
+    );
+    
+    if (currentSpeed > 0) {
+      // Calculate speed multiplier to restore original magnitude
+      const speedMultiplier = activeEffects.slowBall.originalSpeedMagnitude / currentSpeed;
+      
+      // Apply multiplier to preserve angle but restore original speed
+      gameState.circleXUpdate *= speedMultiplier;
+      gameState.circleYUpdate *= speedMultiplier;
+    } else {
+      // Fallback: if current speed is 0, double it
+      gameState.circleXUpdate *= 2;
+      gameState.circleYUpdate *= 2;
+    }
+  } else {
+    // Fallback: double the speed if original wasn't stored
+    gameState.circleXUpdate *= 2;
+    gameState.circleYUpdate *= 2;
+  }
+  
+  // Reset slow ball effect
   activeEffects.slowBall.active = false;
+  activeEffects.slowBall.endTime = 0;
+  activeEffects.slowBall.originalSpeedMagnitude = 0;
+  activeEffects.slowBall.slowDownCount = 0;
   
-  // Restore ball speed (double it back)
-  gameState.circleXUpdate *= 2;
-  gameState.circleYUpdate *= 2;
-  
-  // Restore extra balls speed
+  // Restore extra balls speed (double them back)
   extraBalls.forEach(ball => {
     ball.xUpdate *= 2;
     ball.yUpdate *= 2;
@@ -444,7 +489,12 @@ export const resetPowerUps = () => {
   
   // Reset effects
   activeEffects = {
-    slowBall: { active: false, endTime: 0 },
+    slowBall: { 
+      active: false, 
+      endTime: 0,
+      originalSpeedMagnitude: 0,
+      slowDownCount: 0
+    },
     widePaddle: { 
       active: false, 
       endTime: 0, 

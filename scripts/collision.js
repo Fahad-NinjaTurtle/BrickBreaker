@@ -88,7 +88,7 @@ const Bounce = () => {
   const randomVariation = (Math.random() - 0.5) * 10;
   angle += randomVariation;
   
-  // Get current speed magnitude (preserve level-based speed)
+  // Get current speed magnitude (preserve speed - don't increase it)
   let currentSpeed = Math.sqrt(g.circleXUpdate ** 2 + g.circleYUpdate ** 2);
   
   // If speed is 0 or very low, use base speed from gameState
@@ -96,9 +96,8 @@ const Bounce = () => {
     currentSpeed = g.baseBallSpeed || 200;
   }
   
-  // Add slight speed boost based on hit position (edges get more speed)
-  const speedMultiplier = 1 + Math.abs(hitPosition - 0.5) * 0.1; // Up to 5% speed boost
-  const finalSpeed = currentSpeed * speedMultiplier;
+  // Preserve speed exactly (no speed boost) - ball speed should remain constant
+  const finalSpeed = currentSpeed;
   
   // Set new velocity based on angle
   setVelocityFromAngle(angle, finalSpeed, 75); // Increased max angle to 75°
